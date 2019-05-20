@@ -17,17 +17,17 @@ Minimize the total number of operations.
 class Solution {
 public:
     void moveZeroes(vector<int>& nums) {
-        vector <int> nonzeroelements;
+        vector<int> nonzeroelements;
         
-        for(int i=0;i<nums.size();i++)
-            if(nums[i]!=0)
+        for (int i = 0;i < nums.size(); ++ i)
+            if (nums[i] != 0)
                 nonzeroelements.push_back(nums[i]);
         
-        for(int i=0;i<nonzeroelements.size();i++)
-            nums[i]=nonzeroelements[i];
+        for(int i = 0; i < nonzeroelements.size(); ++ i)
+            nums[i] = nonzeroelements[i];
         
-        for(int i=nonzeroelements.size();i<nums.size();i++)
-            nums[i]=0;
+        for(int i=nonzeroelements.size(); i < nums.size(); ++ i)
+            nums[i] = 0;
         
     }
 };
