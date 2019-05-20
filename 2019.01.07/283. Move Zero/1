@@ -23,10 +23,10 @@ public:
             if (nums[i] != 0)
                 nonzeroelements.push_back(nums[i]);
         
-        for(int i = 0; i < nonzeroelements.size(); ++ i)
+        for (int i = 0; i < nonzeroelements.size(); ++ i)
             nums[i] = nonzeroelements[i];
         
-        for(int i=nonzeroelements.size(); i < nums.size(); ++ i)
+        for (int i = nonzeroelements.size(); i < nums.size(); ++ i)
             nums[i] = 0;
         
     }
