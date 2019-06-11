@@ -1,0 +1,664 @@
+Ubuntu安装库：
+sudo apt-get install libmysqlclient-dev
+
+
+example1
+
+#include <my_global.h>
+#include <mysql.h>
+
+int main(int argc, char **argv)
+{
+  printf("MySQL client version: %s\n", mysql_get_client_info());
+
+  exit(0);
+}
+ 
+
+编译：
+
+gcc version.c -o version  `mysql_config --cflags --libs`
+
+$ ./version 
+MySQL client version: 5.1.67
+ 
+
+example2： 创建数据库：
+
+#include <my_global.h>
+#include <mysql.h>
+
+int main(int argc, char **argv)
+{  
+  MYSQL *con = mysql_init(NULL);
+
+  if (con == NULL) 
+  {
+      fprintf(stderr, "%s\n", mysql_error(con));
+      exit(1);
+  }
+
+  if (mysql_real_connect(con, "localhost", "root", "root_pswd", 
+          NULL, 0, NULL, 0) == NULL) 
+  {
+      fprintf(stderr, "%s\n", mysql_error(con));
+      mysql_close(con);
+      exit(1);
+  }  
+
+  if (mysql_query(con, "CREATE DATABASE testdb")) 
+  {
+      fprintf(stderr, "%s\n", mysql_error(con));
+      mysql_close(con);
+      exit(1);
+  }
+
+  mysql_close(con);
+  exit(0);
+}
+$ gcc createdb.c -o createdb -std=c99  `mysql_config --cflags --libs`
+命令行验证
+
+mysql> SHOW DATABASES;
++--------------------+
+| Database           |
++--------------------+
+| information_schema |
+| mysql              |
+| testdb             |
++--------------------+
+3 rows in set (0.00 sec)
+创建一个新用户
+
+mysql> CREATE USER user12@localhost IDENTIFIED BY '34klq*';
+赋予test_db的所有权限
+
+mysql> GRANT ALL ON testdb.* to user12@localhost;
+下一个例子将创建一个表格和插入一些数据
+
+#include <my_global.h>
+#include <mysql.h>
+
+void finish_with_error(MYSQL *con)
+{
+  fprintf(stderr, "%s\n", mysql_error(con));
+  mysql_close(con);
+  exit(1);        
+}
+
+int main(int argc, char **argv)
+{
+  MYSQL *con = mysql_init(NULL);
+  
+  if (con == NULL) 
+  {
+      fprintf(stderr, "%s\n", mysql_error(con));
+      exit(1);
+  }  
+
+  if (mysql_real_connect(con, "localhost", "user12", "34klq*", 
+          "testdb", 0, NULL, 0) == NULL) 
+  {
+      finish_with_error(con);
+  }    
+  
+  if (mysql_query(con, "DROP TABLE IF EXISTS Cars")) {
+      finish_with_error(con);
+  }
+  
+  if (mysql_query(con, "CREATE TABLE Cars(Id INT, Name TEXT, Price INT)")) {      
+      finish_with_error(con);
+  }
+  
+  if (mysql_query(con, "INSERT INTO Cars VALUES(1,'Audi',52642)")) {
+      finish_with_error(con);
+  }
+  
+  if (mysql_query(con, "INSERT INTO Cars VALUES(2,'Mercedes',57127)")) {
+      finish_with_error(con);
+  }
+  
+  if (mysql_query(con, "INSERT INTO Cars VALUES(3,'Skoda',9000)")) {
+      finish_with_error(con);
+  }
+  
+  if (mysql_query(con, "INSERT INTO Cars VALUES(4,'Volvo',29000)")) {
+      finish_with_error(con);
+  }
+  
+  if (mysql_query(con, "INSERT INTO Cars VALUES(5,'Bentley',350000)")) {
+      finish_with_error(con);
+  }
+  
+  if (mysql_query(con, "INSERT INTO Cars VALUES(6,'Citroen',21000)")) {
+      finish_with_error(con);
+  }
+  
+  if (mysql_query(con, "INSERT INTO Cars VALUES(7,'Hummer',41400)")) {
+      finish_with_error(con);
+  }
+  
+  if (mysql_query(con, "INSERT INTO Cars VALUES(8,'Volkswagen',21600)")) {
+      finish_with_error(con);
+  }
+
+  mysql_close(con);
+  exit(0);
+}
+ 
+
+ 
+
+命令行验证
+
+mysql> USE testdb;
+mysql> SHOW TABLES;
++------------------+
+| Tables_in_testdb |
++------------------+
+| Cars             |
++------------------+
+1 row in set (0.00 sec)
+ 
+
+mysql> SELECT * FROM Cars;
++------+------------+--------+
+| Id   | Name       | Price  |
++------+------------+--------+
+|    1 | Audi       |  52642 |
+|    2 | Mercedes   |  57127 |
+|    3 | Skoda      |   9000 |
+|    4 | Volvo      |  29000 |
+|    5 | Bentley    | 350000 |
+|    6 | Citroen    |  21000 |
+|    7 | Hummer     |  41400 |
+|    8 | Volkswagen |  21600 |
++------+------------+--------+
+8 rows in set (0.00 sec)
+ 
+
+检索数据：
+
+#include <my_global.h>
+#include <mysql.h>
+
+void finish_with_error(MYSQL *con)
+{
+  fprintf(stderr, "%s\n", mysql_error(con));
+  mysql_close(con);
+  exit(1);        
+}
+
+int main(int argc, char **argv)
+{      
+  MYSQL *con = mysql_init(NULL);
+  
+  if (con == NULL)
+  {
+      fprintf(stderr, "mysql_init() failed\n");
+      exit(1);
+  }  
+  
+  if (mysql_real_connect(con, "localhost", "user12", "34klq*", 
+          "testdb", 0, NULL, 0) == NULL) 
+  {
+      finish_with_error(con);
+  }    
+  
+  if (mysql_query(con, "SELECT * FROM Cars")) 
+  {
+      finish_with_error(con);
+  }
+  
+  MYSQL_RES *result = mysql_store_result(con);
+  
+  if (result == NULL) 
+  {
+      finish_with_error(con);
+  }
+
+  int num_fields = mysql_num_fields(result);
+
+  MYSQL_ROW row;
+  
+  while ((row = mysql_fetch_row(result))) 
+  { 
+      for(int i = 0; i < num_fields; i++) 
+      { 
+          printf("%s ", row[i] ? row[i] : "NULL"); 
+      } 
+          printf("\n"); 
+  }
+  
+  mysql_free_result(result);
+  mysql_close(con);
+  
+  exit(0);
+}
+ 
+
+$ ./retrieva_data 
+1 Audi 52642 
+2 Mercedes 57127 
+3 Skoda 9000 
+4 Volvo 29000 
+5 Bentley 350000 
+6 Citroen 21000 
+7 Hummer 41400 
+8 Volkswagen 21600
+ 
+
+最后插入ID：
+
+#include <my_global.h>
+#include <mysql.h>
+
+void finish_with_error(MYSQL *con)
+{
+  fprintf(stderr, "%s\n", mysql_error(con));
+  mysql_close(con);
+  exit(1);        
+}
+
+int main(int argc, char **argv)
+{
+  
+  MYSQL *con = mysql_init(NULL);
+  
+  if (con == NULL)
+  {
+      fprintf(stderr, "mysql_init() failed\n");
+      exit(1);
+  }
+  
+  if (mysql_real_connect(con, "localhost", "user12", "34klq*", 
+          "testdb", 0, NULL, 0) == NULL) 
+  {
+      finish_with_error(con);
+  }   
+  
+  if (mysql_query(con, "DROP TABLE IF EXISTS Writers"))
+  {    
+      finish_with_error(con);    
+  }
+  
+  char *sql = "CREATE TABLE Writers(Id INT PRIMARY KEY AUTO_INCREMENT, Name TEXT)";
+  
+  if (mysql_query(con, sql))
+  {    
+      finish_with_error(con);    
+  }
+  
+  if (mysql_query(con, "INSERT INTO Writers(Name) VALUES('Leo Tolstoy')"))
+  {    
+      finish_with_error(con);    
+  }
+  
+  if (mysql_query(con, "INSERT INTO Writers(Name) VALUES('Jack London')"))
+  {    
+      finish_with_error(con);
+  }
+  
+  if (mysql_query(con, "INSERT INTO Writers(Name) VALUES('Honore de Balzac')"))
+  {    
+      finish_with_error(con);
+  }
+  
+  int id = mysql_insert_id(con);
+  
+  printf("The last inserted row id is: %d\n", id);
+
+  mysql_close(con);
+  exit(0);
+}
+$ ./last_row_id 
+The last inserted row id is: 3
+加一个例子检索数据并输出改列的名字：
+
+#include <my_global.h>
+#include <mysql.h>
+
+void finish_with_error(MYSQL *con)
+{
+  fprintf(stderr, "%s\n", mysql_error(con));
+  mysql_close(con);
+  exit(1);        
+}
+
+int main(int argc, char **argv)
+{
+  MYSQL *con = mysql_init(NULL);
+  
+  if (con == NULL)
+  {
+      fprintf(stderr, "mysql_init() failed\n");
+      exit(1);
+  }  
+  
+  if (mysql_real_connect(con, "localhost", "user12", "34klq*", 
+          "testdb", 0, NULL, 0) == NULL) 
+  {
+      finish_with_error(con);
+  } 
+  
+  if (mysql_query(con, "SELECT * FROM Cars LIMIT 3"))
+  {  
+      finish_with_error(con);
+  }
+  
+  MYSQL_RES *result = mysql_store_result(con);
+
+  if (result == NULL) 
+  {
+      finish_with_error(con);
+  }  
+
+  int num_fields = mysql_num_fields(result);
+
+  MYSQL_ROW row;
+  MYSQL_FIELD *field;
+  
+  while ((row = mysql_fetch_row(result))) 
+  { 
+      for(int i = 0; i < num_fields; i++) 
+      { 
+          if (i == 0) 
+          {              
+             while(field = mysql_fetch_field(result)) 
+             {
+                printf("%s ", field->name);
+             }
+             
+             printf("\n");           
+          }
+          
+          printf("%s  ", row[i] ? row[i] : "NULL"); 
+      } 
+  }
+  
+  printf("\n");
+  
+  mysql_free_result(result);
+  mysql_close(con);
+  
+  exit(0);
+}
+ 
+
+$ ./headers 
+Id Name Price 
+1  Audi  52642  
+2  Mercedes  57127  
+3  Skoda  9000
+ 
+
+多语句运行：
+
+设置CLIENT_MULTI_STATEMENTS
+
+#include <my_global.h>
+#include <mysql.h>
+
+void finish_with_error(MYSQL *con)
+{
+  fprintf(stderr, "%s\n", mysql_error(con));
+  mysql_close(con);
+  exit(1);        
+}
+
+int main(int argc, char **argv)
+{ 
+  int status = 0;  
+    
+  MYSQL *con = mysql_init(NULL);  
+  
+  if (con == NULL)
+  {
+      fprintf(stderr, "mysql_init() failed\n");
+      exit(1);
+  }  
+  
+  if (mysql_real_connect(con, "localhost", "user12", "34klq*", 
+          "testdb", 0, NULL, CLIENT_MULTI_STATEMENTS) == NULL) 
+  {
+      finish_with_error(con);
+  }    
+  
+  if (mysql_query(con, "SELECT Name FROM Cars WHERE Id=2;\
+      SELECT Name FROM Cars WHERE Id=3;SELECT Name FROM Cars WHERE Id=6")) 
+  {
+      finish_with_error(con);
+  }
+  
+  do {  
+      MYSQL_RES *result = mysql_store_result(con);
+        
+      if (result == NULL) 
+      {
+          finish_with_error(con);
+      }
+            
+      MYSQL_ROW row = mysql_fetch_row(result);
+      
+      printf("%s\n", row[0]);
+      
+      mysql_free_result(result);
+                 
+      status = mysql_next_result(con); 
+     
+      if (status > 0) {
+          finish_with_error(con);
+      }
+      
+  } while(status == 0);
+    
+  mysql_close(con);  
+  exit(0);
+}
+ 
+
+插入图片数据到MySQL数据库：
+
+图像是二进制数据。MySQL数据库有一个特殊的数据类型来存储称为BROB（二进制大对象）的二进制数据。
+
+mysql> CREATE TABLE Images(Id INT PRIMARY KEY, Data MEDIUMBLOB);
+
+#include <my_global.h>
+#include <mysql.h>
+#include <string.h>
+
+void finish_with_error(MYSQL *con)
+{
+  fprintf(stderr, "%s\n", mysql_error(con));
+  mysql_close(con);
+  exit(1);        
+}
+
+int main(int argc, char **argv)
+{
+
+  FILE *fp = fopen("woman.jpg", "rb");
+  
+  if (fp == NULL) 
+  {
+      fprintf(stderr, "cannot open image file\n");    
+      exit(1);
+  }
+      
+  fseek(fp, 0, SEEK_END);
+  
+  if (ferror(fp)) {
+      
+      fprintf(stderr, "fseek() failed\n");
+      int r = fclose(fp);
+
+      if (r == EOF) {
+          fprintf(stderr, "cannot close file handler\n");          
+      }    
+      
+      exit(1);
+  }  
+  
+  int flen = ftell(fp);
+  
+  if (flen == -1) {
+      
+      perror("error occurred");
+      int r = fclose(fp);
+
+      if (r == EOF) {
+          fprintf(stderr, "cannot close file handler\n");
+      }
+      
+      exit(1);      
+  }
+  
+  fseek(fp, 0, SEEK_SET);
+  
+  if (ferror(fp)) {
+      
+      fprintf(stderr, "fseek() failed\n");
+      int r = fclose(fp);
+
+      if (r == EOF) {
+          fprintf(stderr, "cannot close file handler\n");
+      }    
+      
+      exit(1);
+  }
+
+  char data[flen+1];
+
+  int size = fread(data, 1, flen, fp);
+  
+  if (ferror(fp)) {
+      
+      fprintf(stderr, "fread() failed\n");
+      int r = fclose(fp);
+
+      if (r == EOF) {
+          fprintf(stderr, "cannot close file handler\n");
+      }
+      
+      exit(1);      
+  }
+  
+  int r = fclose(fp);
+
+  if (r == EOF) {
+      fprintf(stderr, "cannot close file handler\n");
+  }          
+  
+  MYSQL *con = mysql_init(NULL);
+  
+  if (con == NULL)
+  {
+      fprintf(stderr, "mysql_init() failed\n");
+      exit(1);
+  }  
+    
+  if (mysql_real_connect(con, "localhost", "user12", "34klq*", 
+          "testdb", 0, NULL, 0) == NULL) 
+  {
+      finish_with_error(con);
+  }   
+    
+  char chunk[2*size+1];
+  mysql_real_escape_string(con, chunk, data, size);
+
+  char *st = "INSERT INTO Images(Id, Data) VALUES(1, '%s')";
+  size_t st_len = strlen(st);
+
+  char query[st_len + 2*size+1]; 
+  int len = snprintf(query, st_len + 2*size+1, st, chunk);
+
+  if (mysql_real_query(con, query, len))
+  {
+      finish_with_error(con);
+  }
+  
+  mysql_close(con);
+  exit(0);
+}
+ 
+
+ 
+
+查找图像数据
+
+#include <my_global.h>
+#include <mysql.h>
+
+void finish_with_error(MYSQL *con)
+{
+  fprintf(stderr, "%s\n", mysql_error(con));
+  mysql_close(con);
+  exit(1);        
+}
+
+int main(int argc, char **argv)
+{
+  FILE *fp = fopen("woman2.jpg", "wb");
+  
+  if (fp == NULL) 
+  {
+      fprintf(stderr, "cannot open image file\n");    
+      exit(1);
+  }
+
+  MYSQL *con = mysql_init(NULL);
+  
+  if (con == NULL)
+  {
+      fprintf(stderr, "mysql_init() failed\n");
+      exit(1);
+  }  
+  
+  if (mysql_real_connect(con, "localhost", "user12", "34klq*", 
+          "testdb", 0, NULL, 0) == NULL) 
+  {
+      finish_with_error(con);
+  }
+  
+  if (mysql_query(con, "SELECT Data FROM Images WHERE Id=1"))
+  {
+      finish_with_error(con);
+  }
+  
+  MYSQL_RES *result = mysql_store_result(con);
+  
+  if (result == NULL) 
+  {
+      finish_with_error(con);
+  }  
+
+  MYSQL_ROW row = mysql_fetch_row(result);
+  unsigned long *lengths = mysql_fetch_lengths(result);
+  
+  if (lengths == NULL) {
+      finish_with_error(con);
+  }
+  
+  fwrite(row[0], lengths[0], 1, fp);
+
+  if (ferror(fp)) 
+  {            
+      fprintf(stderr, "fwrite() failed\n");
+      mysql_free_result(result);
+      mysql_close(con);
+
+      exit(1);      
+  }  
+  
+  int r = fclose(fp);
+
+  if (r == EOF) {
+      fprintf(stderr, "cannot close file handler\n");
+  }
+  
+  mysql_free_result(result);
+  mysql_close(con);
+
+  exit(0);
+}
+
